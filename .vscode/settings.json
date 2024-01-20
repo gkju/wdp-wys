@@ -55,6 +55,8 @@
         "vector": "cpp",
         "algorithm": "cpp",
         "climits": "cpp",
-        "random": "cpp"
+        "random": "cpp",
+        "__tree": "cpp",
+        "map": "cpp"
     }
 }

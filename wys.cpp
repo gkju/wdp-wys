@@ -106,7 +106,7 @@ class WysSolver {
             return where_to_go_map;
         }
 
-        // zmienia array na pojedynczy int64_t (z uwagi na ograniczenia na n i k array to tak naprawde int)
+        // zmienia array i depth na pojedynczy int64_t (z uwagi na ograniczenia na n i k array to tak naprawde int)
         int64_t hash_candidates(const candidates_list_t& candidates, int64_t depth) {
             return candidates + (depth << (k + 1) * n);
         }
@@ -120,11 +120,21 @@ class WysSolver {
             return ans;
         }
 
+        // zwraca sume zbiorow z listy
+        inline candidates_t get_union(const candidates_list_t& list) {
+            candidates_t ans = 0;
+            for(size_t i = 0; i <= k; ++i) {
+                ans |= list >> (i * n);
+            }
+            ans &= mask;
+            return ans;
+        }
+
         // sprawdzamy terminalnosc stanu patrzac na wszystkich mozliwych kandydatow zaleznie od ilosci klamstw, w kazdym przypadku 
         // musi byc ten sam kandydat aby stan byl terminalny
         GAME_STATE is_terminal(const candidates_list_t& candidates) {
-            candidates_t check = 0;
             /* Gdyby candidates bylo array chcielibysmy wykonac nastepujace operacje;
+            candidates_t check = 0;
             for(size_t i = 0; i <= k; ++i) {
                 check |= candidates[i];
             }
@@ -134,10 +144,7 @@ class WysSolver {
             return __builtin_popcount(check) == 1 ? TERMINAL : NON_TERMINAL;
             */
             // w przypadku int64_t musimy to zrobic inaczej
-            for(size_t i = 0; i <= k; ++i) {
-                check |= candidates >> (i * n);
-            }
-            check &= mask;
+            candidates_t check = get_union(candidates);
             if(!check) {
                 return INVALID;
             }
@@ -146,7 +153,7 @@ class WysSolver {
 
         candidates_list_t gen_initial_candidates() {
             candidates_list_t candidates = 0;
-            bitset_fill(candidates, 0, (k + 1) * n - 1);
+            candidates |= big_mask;
             return candidates;
         }
 
@@ -161,7 +168,7 @@ class WysSolver {
             // ta maska bedzie zawierac k + 1 kopii query_candidates do szybkiego andowania
             candidates_t query_candidates_mask = 0;
             for(int i = 0; i <= k; ++i) {
-                query_candidates_mask <<= (n * i);
+                query_candidates_mask <<= n;
                 query_candidates_mask |= query_canidates;
             }
             candidates_list_t new_candidates = 0;
@@ -175,13 +182,13 @@ class WysSolver {
             }
             */
             new_candidates = candidates & query_candidates_mask;
-            new_candidates |= candidates << n & ~query_candidates_mask;
+            new_candidates |= (candidates << n) & ~query_candidates_mask;
             new_candidates &= big_mask;
             return new_candidates;
         }
 
         int32_t extract_ans(const candidates_list_t& candidates) {
-            return __builtin_ctzll(candidates >> (n * k)) + 1;
+            return __builtin_ctzll(get_union(candidates)) + 1;
         }
 
         // rozwiazuje gre i zwraca ilosc ruchow potrzebnych w optymalnej strategii
@@ -210,9 +217,9 @@ class WysSolver {
             int32_t where_to_go = -1;
 
             // rozwazamy mozliwe ruchy przy czym pytanie sie o jedynke jest bez sensu gdy drugi gracz gra optymalnie
-            for(int64_t i = 2; i <= n; ++i) {
+            for(int64_t _i = 2; _i <= n; ++_i) {
                 // prawdziwy indeks bedzie pochodzic z losowej permutacji permutacja
-                //int64_t i = shuffles[shuffle_ind][_i - 2];
+                int64_t i = shuffles[shuffle_ind][_i - 2];
                 int64_t moves_needed = -Inf;
                 int64_t moves_sum = 0;
                 // musimy wziac maksymalna ilosc ruchow z dwoch mozliwych odpowiedzi na nasze pytanie
@@ -244,7 +251,7 @@ int main() {
     int n, k, g;
     dajParametry(n, k, g);
     WysSolver solver(n, k);
-    std::cout << "CAN SOLVE IN " << solver.solve_game() << std::endl;
+    solver.solve_game();
     auto where_to_map = std::move(solver.get_where_to());
     auto memo = std::move(solver.get_memo());
     for(int i = 0; i < g; ++i) {
