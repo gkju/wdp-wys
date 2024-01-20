@@ -1,9 +1,10 @@
 #include <vector>
 #include <algorithm>
 #include <iostream>
-#include <unordered_set>
+#include <unordered_map>
 #include <climits>
 #include <random>
+#include <array>
 #include <bitset>
 
 #define Inf (INT_MAX - 1)
@@ -13,11 +14,11 @@
 typedef uint64_t candidates_t;
 typedef std::array<candidates_t, MAX_K + 1> candidates_list_t;
 
-void set(uint64_t& bitset, int i) {
+void set(uint64_t& bitset, uint64_t i) {
     bitset |= (1ULL << i);
 }
 
-void reset(uint64_t& bitset, int i) {
+void reset(uint64_t& bitset, uint64_t i) {
     bitset &= ~(1ULL << i);
 }
 
@@ -41,23 +42,18 @@ enum GAME_STATE {
 
 struct Query {
     // O co się pytaliśmy
-    int y;
+    int64_t y;
     // prawda gdy szukane < y
     bool ans;
 };
 
 // ustawia wszystkie bity na 1 miedzy a i b
-void bitset_fill(candidates_t& bitset, int a, int b) {
+void bitset_fill(candidates_t& bitset, int64_t a, int64_t b) {
     if(a > b) {
         std::swap(a, b);
     }
-    bitset = (1ULL << (b + 1)) - (1ULL << a);
+    bitset = (1LL << (b + 1)) - (1LL << a);
 }
-
-/*
-Główny claim - coś jest pewnym kłamstwem gdy nie zgadza się z odpowiedziami k+1 query
-Po usunięciu pewnych kłamstw, kłamstwem mogą być dowolne query. - może nie? lepiej sprawdzić na start i zobaczyć jak szybko bedzie chodzic
-*/
 
 // szybki srand z https://stackoverflow.com/questions/26237419/faster-than-rand
 static unsigned int seed;
@@ -68,10 +64,12 @@ inline int fast_srand(void) {
 
 // ta klasa bedzie zapisywac sobie drzewo gry dla danego n i k
 class WysSolver {
-    int n, k;
+    int64_t n, k;
     std::vector<Query> state_vec;
     // n losowych permutacji [2, n]
     std::vector<std::vector<int>> shuffles;
+    // spamietuje wyniki dla ustalonego stanu gdzie klucz to hash kandydatow dla danego stanu
+    std::unordered_map<uint64_t, uint64_t> memo;
     
     public:
         WysSolver(int n, int k) {
@@ -90,11 +88,21 @@ class WysSolver {
             }
         }
 
+        // kompresuje (hashowaloby dla k>3) kandydatow do inta
+        uint64_t hash_candidates(const candidates_list_t& candidates, uint64_t depth) {
+            int64_t ans = 0;
+            for(int i = 0; i <= k; ++i) {
+                ans += candidates[i] << (n * i);
+            }
+            ans += depth << (n * (k + 1));
+            return ans;
+        }
+
         // zaznacza liczby ktore moga byc wedlug query
         candidates_t QueryToCandidates(const Query& query) {
             candidates_t ans = 0;
-            int beg = query.ans ? 1 : query.y;
-            int end = query.ans ? query.y - 1 : n;
+            int64_t beg = query.ans ? 0 : query.y - 1;
+            int64_t end = query.ans ? query.y - 2 : n - 1;
             bitset_fill(ans, beg, end);
             return ans;
         }
@@ -103,27 +111,29 @@ class WysSolver {
         // musi byc ten sam kandydat aby stan byl terminalny
         GAME_STATE is_terminal(const candidates_list_t& candidates) {
             candidates_t check = 0;
-            for(int i = 0; i <= k; ++i) {
-                if(!candidates[i]) {
-                    return INVALID;
-                }
+            for(size_t i = 0; i <= k; ++i) {
                 check |= candidates[i];
+            }
+            if(!check) {
+                return INVALID;
             }
             return __builtin_popcount(check) == 1 ? TERMINAL : NON_TERMINAL;
         }
 
-        int solve_game() {
+        candidates_list_t gen_initial_candidates() {
             candidates_list_t candidates;
             for(int i = 0; i <= k; ++i) {
                 candidates[i] = 0;
-                for(int j = 1; j <= n; ++j) {
+                for(int j = 0; j < n; ++j) {
                     set(candidates[i], j);
                 }
             }
+            return candidates;
+        }
 
-            // WIP OPTYMISTYCZNIE OGRANICZAM PRZEZ lg2(n) * (k + 1)
-            // musimy przekazac naszego bounda na strategie, aby nie wszedl w zle galezi
-            return _solve_game(candidates, lg2c(n) * (2 * k + 1));
+        int solve_game() {
+            uint64_t max_depth = lg2c(n) * (2 * k + 1) + 3;
+            return _solve_game(gen_initial_candidates(), max_depth);
         }
 
         // uwzglednia nowe query i liczy jacy candidates powinni byc w nastepnym stanie
@@ -131,7 +141,7 @@ class WysSolver {
             candidates_t query_canidates = QueryToCandidates(query);
             candidates_list_t new_candidates;
             new_candidates[0] = candidates[0] & query_canidates;
-            for(int i = 1; i <= k; ++i) {
+            for(size_t i = 1; i <= k; ++i) {
                 // nasze query jest klamstwem albo nie, stad albo mamy starych kandydatow obostrzonych o query albo bierzemy kandydatow dla mniejszej ilosci klamstw 
                 // i obostrzamy ich o to klamstwo
                 new_candidates[i] = candidates[i] & query_canidates;
@@ -142,36 +152,43 @@ class WysSolver {
         }
 
         // rozwiazuje gre i zwraca ilosc ruchow potrzebnych w optymalnej strategii
-        int _solve_game(const candidates_list_t& candidates, int current_best, int depth = 0) {
+        int64_t _solve_game(const candidates_list_t& candidates, uint64_t max_depth, uint64_t depth = 0) {
+            uint64_t hash = hash_candidates(candidates, depth);
+            if(memo.count(hash)) {
+                return memo[hash];
+            }
+
             auto terminality = is_terminal(candidates);
-            if(terminality == TERMINAL || terminality == INVALID) {
+            if(terminality == TERMINAL) {
+                memo.insert({hash, 0});
                 return 0;
-            } else if(depth > current_best) {
+            } else if(depth > max_depth || terminality == INVALID) {
                 return Inf;
             }
 
             // bedziemy sie iterowac po losowej permutacji
             int shuffle_ind = fast_srand() % n;
-            int ans = Inf;
+            int64_t ans = Inf;
 
             // rozwazamy mozliwe ruchy przy czym pytanie sie o jedynke jest bez sensu gdy drugi gracz gra optymalnie
-            for(int _i = 2; _i <= n; ++_i) {
+            for(int64_t i = 2; i <= n; ++i) {
                 // prawdziwy indeks bedzie pochodzic z losowej permutacji permutacja
-                int i = shuffles[shuffle_ind][_i - 2];
-                int moves_needed = -Inf;
+                //int i = shuffles[shuffle_ind][_i - 2];
+                int64_t moves_needed = -Inf;
                 // musimy wziac maksymalna ilosc ruchow z dwoch mozliwych odpowiedzi na nasze pytanie
                 for(int j = 0; j < 2; ++j) {
                     state_vec.push_back((Query) {i, (bool) j});
                     // max, bo w opt strat interesuje nas najgorszy przypadek
                     moves_needed = std::max(
                         moves_needed, 
-                        _solve_game(get_new_candidates(candidates, state_vec.back()), current_best, depth + 1) + 1);
+                        _solve_game(get_new_candidates(candidates, state_vec.back()), max_depth, depth + 1) + 1);
                     state_vec.pop_back();
                 }
                 
                 ans = std::min(ans, moves_needed);
-                current_best = std::min(current_best, ans);
             }
+
+            memo.insert({hash, ans});
 
             return ans;
         }
