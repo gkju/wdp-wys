@@ -167,13 +167,13 @@ class WysSolver {
             }
 
             // bedziemy sie iterowac po losowej permutacji
-            int shuffle_ind = fast_srand() % n;
+            //int shuffle_ind = fast_srand() % n;
             int64_t ans = Inf;
 
             // rozwazamy mozliwe ruchy przy czym pytanie sie o jedynke jest bez sensu gdy drugi gracz gra optymalnie
             for(int64_t i = 2; i <= n; ++i) {
                 // prawdziwy indeks bedzie pochodzic z losowej permutacji permutacja
-                //int i = shuffles[shuffle_ind][_i - 2];
+                //int64_t i = shuffles[shuffle_ind][_i - 2];
                 int64_t moves_needed = -Inf;
                 // musimy wziac maksymalna ilosc ruchow z dwoch mozliwych odpowiedzi na nasze pytanie
                 for(int j = 0; j < 2; ++j) {
