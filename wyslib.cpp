@@ -1,6 +1,6 @@
 #include <iostream>
 #include <algorithm>
-
+#include <bitset>
 #include "wys.h"
 
 namespace {

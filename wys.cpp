@@ -25,9 +25,9 @@ void reset(int64_t& bitset, int64_t i) {
 }
 
 // sufit z lg(x)
-int lg2c(int x) {
-    int cur = 1;
-    int ans = 0;
+int64_t lg2c(int64_t x) {
+    int64_t cur = 1;
+    int64_t ans = 0;
     while(cur < x) {
         cur <<= 1;
         ++ans;
@@ -50,7 +50,7 @@ struct Query {
 };
 
 // ustawia wszystkie bity na 1 miedzy a i b
-void bitset_fill(candidates_list_t& bitset, int64_t a, int64_t b) {
+constexpr void bitset_fill(candidates_list_t& bitset, int64_t a, int64_t b) {
     if(a > b) {
         std::swap(a, b);
     }
@@ -68,7 +68,7 @@ inline int fast_srand(void) {
 class WysSolver {
     int64_t n, k;
     // n losowych permutacji [2, n]
-    std::vector<std::vector<int>> shuffles;
+    std::vector<std::vector<int32_t>> shuffles;
     // spamietuje wyniki dla ustalonego stanu gdzie klucz to hash kandydatow dla danego stanu
     std::unordered_map<int64_t, int64_t> memo;
     // dla hashu stanu zapisuje gdzie isc
@@ -79,16 +79,16 @@ class WysSolver {
     candidates_list_t big_mask;
     
     public:
-        WysSolver(int n, int k) {
-            this->n = n;
-            this->k = k;
+        WysSolver(int _n, int _k) {
+            this->n = _n;
+            this->k = _k;
 
             std::random_device rd;
             std::mt19937 g(rd());
 
-            for(int i = 0; i < n; ++i) {
+            for(int32_t i = 0; i < n; ++i) {
                 shuffles.push_back({});
-                for(int j = 2; j <= n; ++j) {
+                for(int32_t j = 2; j <= n; ++j) {
                     shuffles[i].push_back(j);
                 }
                 std::shuffle(shuffles[i].begin(), shuffles[i].end(), g);
@@ -123,7 +123,7 @@ class WysSolver {
         // zwraca sume zbiorow z listy
         constexpr candidates_list_t get_union(const candidates_list_t& list) {
             candidates_list_t ans = list;
-            for(size_t i = 0; i <= k; ++i) {
+            for(int64_t i = 0; i <= k; ++i) {
                 ans |= ans >> (i * n);
             }
             ans &= mask;
@@ -157,7 +157,7 @@ class WysSolver {
             return candidates;
         }
 
-        int solve_game() {
+        int64_t solve_game() {
             int64_t max_depth = lg2c(n) * (2 * k + 1);
             return _solve_game(gen_initial_candidates(), max_depth);
         }
@@ -208,20 +208,20 @@ class WysSolver {
             }
 
             // bedziemy sie iterowac po losowej permutacji
-            int shuffle_ind = fast_srand() % n;
+            int64_t shuffle_ind = fast_srand() % n;
             int64_t ans = Inf;
             int32_t where_to_go = -1;
             // nasza wartosc musi byc dobrze zdefiniowana aby ja wlozyc do mapy
             bool can_insert = true;
 
             // rozwazamy mozliwe ruchy przy czym pytanie sie o jedynke jest bez sensu gdy drugi gracz gra optymalnie
-            for(int64_t _i = 2; _i <= n; ++_i) {
+            for(int32_t _i = 2; _i <= n; ++_i) {
                 // prawdziwy indeks bedzie pochodzic z losowej permutacji permutacja
-                int64_t i = shuffles[shuffle_ind][_i - 2];
+                int32_t i = shuffles[shuffle_ind][_i - 2];
                 int64_t moves_needed = -Inf;
                 // musimy wziac maksymalna ilosc ruchow z dwoch mozliwych odpowiedzi na nasze pytanie
                 for(int j = 0; j < 2; ++j) {
-                    auto q = (Query) {i, (bool) j};
+                    auto q = Query {i, (bool) j};
                     // max, bo w opt strat interesuje nas najgorszy przypadek
                     moves_needed = std::max(
                         moves_needed, 
@@ -263,7 +263,7 @@ int main() {
             candidates = solver.get_new_candidates(candidates, q);
             hash = solver.hash_candidates(candidates, ++depth);
         }
-        odpowiedz(solver.extract_ans(candidates));
+        odpowiedz((int32_t) solver.extract_ans(candidates));
     }
     return 0;
 }
