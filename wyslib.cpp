@@ -10,7 +10,7 @@ int ileGier, ileZapytan, maxZapytan;
 }
 
 void dajParametry(int &n, int &k, int &g) {
-  std::cin >> _n >> _k >> _g;
+  _n = 12, _k = 3, _g = 10000;
   n = _n; k = _k; g = _g;
   _x = rand() % n + 1;
   ileGier = ileZapytan = maxZapytan = 0;

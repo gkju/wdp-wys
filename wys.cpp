@@ -6,6 +6,7 @@
 #include <random>
 #include <array>
 #include <bitset>
+#include "wys.h"
 
 #define Inf (INT_MAX - 1)
 #define MAX_K 3
@@ -65,11 +66,12 @@ inline int fast_srand(void) {
 // ta klasa bedzie zapisywac sobie drzewo gry dla danego n i k
 class WysSolver {
     int64_t n, k;
-    std::vector<Query> state_vec;
     // n losowych permutacji [2, n]
     std::vector<std::vector<int>> shuffles;
     // spamietuje wyniki dla ustalonego stanu gdzie klucz to hash kandydatow dla danego stanu
     std::unordered_map<uint64_t, uint64_t> memo;
+    // dla hashu stanu zapisuje gdzie isc
+    std::unordered_map<uint64_t, int32_t> where_to_go_map;
     
     public:
         WysSolver(int n, int k) {
@@ -86,6 +88,10 @@ class WysSolver {
                 }
                 std::shuffle(shuffles[i].begin(), shuffles[i].end(), g);
             }
+        }
+
+        std::unordered_map<uint64_t, int32_t> get_where_to() {
+            return where_to_go_map;
         }
 
         // kompresuje (hashowaloby dla k>3) kandydatow do inta
@@ -151,10 +157,14 @@ class WysSolver {
             return new_candidates;
         }
 
+        int32_t extract_ans(const candidates_list_t& candidates) {
+            return __builtin_ctzll(candidates[k]) + 1;
+        }
+
         // rozwiazuje gre i zwraca ilosc ruchow potrzebnych w optymalnej strategii
         int64_t _solve_game(const candidates_list_t& candidates, uint64_t max_depth, uint64_t depth = 0) {
             uint64_t hash = hash_candidates(candidates, depth);
-            if(memo.count(hash)) {
+            if(memo.count(hash)) { 
                 return memo[hash];
             }
 
@@ -167,37 +177,56 @@ class WysSolver {
             }
 
             // bedziemy sie iterowac po losowej permutacji
-            //int shuffle_ind = fast_srand() % n;
+            int shuffle_ind = fast_srand() % n;
             int64_t ans = Inf;
+            int32_t where_to_go = -1;
 
             // rozwazamy mozliwe ruchy przy czym pytanie sie o jedynke jest bez sensu gdy drugi gracz gra optymalnie
-            for(int64_t i = 2; i <= n; ++i) {
+            for(int64_t _i = 2; _i <= n; ++_i) {
                 // prawdziwy indeks bedzie pochodzic z losowej permutacji permutacja
-                //int64_t i = shuffles[shuffle_ind][_i - 2];
+                int64_t i = shuffles[shuffle_ind][_i - 2];
                 int64_t moves_needed = -Inf;
                 // musimy wziac maksymalna ilosc ruchow z dwoch mozliwych odpowiedzi na nasze pytanie
                 for(int j = 0; j < 2; ++j) {
-                    state_vec.push_back((Query) {i, (bool) j});
+                    auto q = (Query) {i, (bool) j};
                     // max, bo w opt strat interesuje nas najgorszy przypadek
                     moves_needed = std::max(
                         moves_needed, 
-                        _solve_game(get_new_candidates(candidates, state_vec.back()), max_depth, depth + 1) + 1);
-                    state_vec.pop_back();
+                        _solve_game(get_new_candidates(candidates, q), max_depth, depth + 1) + 1);
                 }
                 
-                ans = std::min(ans, moves_needed);
+                if(moves_needed != -Inf && moves_needed < ans) {
+                    ans = moves_needed;
+                    where_to_go = i;
+                }
             }
 
-            memo.insert({hash, ans});
+            if(!memo.count(hash) || memo[hash] > ans) {
+                where_to_go_map[hash] = where_to_go;
+                memo.insert({hash, ans});
+            }
 
             return ans;
         }
 };
 
 int main() {
-    int n, k;
-    std::cin >> n >> k;
+    int n, k, g;
+    dajParametry(n, k, g);
     WysSolver solver(n, k);
-    std::cout << solver.solve_game() << std::endl;
+    solver.solve_game();
+    auto where_to_map = std::move(solver.get_where_to());
+    for(int i = 0; i < g; ++i) {
+        candidates_list_t candidates = solver.gen_initial_candidates();
+        int32_t depth = 0;
+        uint64_t hash = solver.hash_candidates(candidates, depth);
+        while(solver.is_terminal(candidates) != TERMINAL) {
+            int32_t where_to_go = where_to_map[hash];
+            Query q = {where_to_go, mniejszaNiz(where_to_go)};
+            candidates = solver.get_new_candidates(candidates, q);
+            hash = solver.hash_candidates(candidates, ++depth);
+        }
+        odpowiedz(solver.extract_ans(candidates));
+    }
     return 0;
 }
