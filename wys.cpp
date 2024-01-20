@@ -17,11 +17,11 @@ typedef int64_t candidates_t;
 typedef int64_t candidates_list_t;
 
 void set(int64_t& bitset, int64_t i) {
-    bitset |= (1 << i);
+    bitset |= (1LL << i);
 }
 
 void reset(int64_t& bitset, int64_t i) {
-    bitset &= ~(1 << i);
+    bitset &= ~(1LL << i);
 }
 
 // sufit z lg(x)
@@ -50,7 +50,7 @@ struct Query {
 };
 
 // ustawia wszystkie bity na 1 miedzy a i b
-void bitset_fill(candidates_t& bitset, int64_t a, int64_t b) {
+void bitset_fill(candidates_list_t& bitset, int64_t a, int64_t b) {
     if(a > b) {
         std::swap(a, b);
     }
@@ -107,24 +107,24 @@ class WysSolver {
         }
 
         // zmienia array i depth na pojedynczy int64_t (z uwagi na ograniczenia na n i k array to tak naprawde int)
-        int64_t hash_candidates(const candidates_list_t& candidates, int64_t depth) {
+        constexpr int64_t hash_candidates(const candidates_list_t& candidates, int64_t depth) {
             return candidates + (depth << (k + 1) * n);
         }
 
         // zaznacza liczby ktore moga byc wedlug query
-        candidates_t QueryToCandidates(const Query& query) {
+        constexpr candidates_t QueryToCandidates(const Query& query) {
             candidates_t ans = 0;
-            int32_t beg = query.ans ? 0 : query.y - 1;
-            int32_t end = query.ans ? query.y - 2 : n - 1;
+            int64_t beg = query.ans ? 0 : query.y - 1;
+            int64_t end = query.ans ? query.y - 2 : n - 1;
             bitset_fill(ans, beg, end);
             return ans;
         }
 
         // zwraca sume zbiorow z listy
-        inline candidates_t get_union(const candidates_list_t& list) {
-            candidates_t ans = 0;
+        constexpr candidates_list_t get_union(const candidates_list_t& list) {
+            candidates_list_t ans = list;
             for(size_t i = 0; i <= k; ++i) {
-                ans |= list >> (i * n);
+                ans |= ans >> (i * n);
             }
             ans &= mask;
             return ans;
@@ -153,7 +153,7 @@ class WysSolver {
 
         candidates_list_t gen_initial_candidates() {
             candidates_list_t candidates = 0;
-            candidates |= big_mask;
+            bitset_fill(candidates, 0, (k + 1) * n - 1);
             return candidates;
         }
 
@@ -187,7 +187,7 @@ class WysSolver {
             return new_candidates;
         }
 
-        int32_t extract_ans(const candidates_list_t& candidates) {
+        int64_t extract_ans(const candidates_list_t& candidates) {
             return __builtin_ctzll(get_union(candidates)) + 1;
         }
 
@@ -199,46 +199,45 @@ class WysSolver {
             }
 
             auto terminality = is_terminal(candidates);
-            if(terminality == TERMINAL) {
-                if(!memo.count(hash)) {
-                    memo.insert({hash, 0});
-                }
+
+            if(terminality != NON_TERMINAL) {
+                memo.insert({hash, 0});
                 return 0;
-            } else if(depth > max_depth || terminality == INVALID) {
+            } else if(depth > max_depth) {
                 return Inf;
             }
 
             // bedziemy sie iterowac po losowej permutacji
             int shuffle_ind = fast_srand() % n;
             int64_t ans = Inf;
-            // w przypadku pytan, ktore wymagaja tyle samo pytan w gorszym przypadku wybierzemy pytanie, ktore w lepszym przypadku
-            // wymaga mniej pytan
-            int64_t ans_sum = Inf;
             int32_t where_to_go = -1;
+            // nasza wartosc musi byc dobrze zdefiniowana aby ja wlozyc do mapy
+            bool can_insert = true;
 
             // rozwazamy mozliwe ruchy przy czym pytanie sie o jedynke jest bez sensu gdy drugi gracz gra optymalnie
             for(int64_t _i = 2; _i <= n; ++_i) {
                 // prawdziwy indeks bedzie pochodzic z losowej permutacji permutacja
                 int64_t i = shuffles[shuffle_ind][_i - 2];
                 int64_t moves_needed = -Inf;
-                int64_t moves_sum = 0;
                 // musimy wziac maksymalna ilosc ruchow z dwoch mozliwych odpowiedzi na nasze pytanie
                 for(int j = 0; j < 2; ++j) {
                     auto q = (Query) {i, (bool) j};
                     // max, bo w opt strat interesuje nas najgorszy przypadek
-                    int64_t sub_solution = _solve_game(get_new_candidates(candidates, q), max_depth, depth + 1) + 1;
-                    moves_sum += sub_solution;
-                    moves_needed = std::max(moves_needed, sub_solution);
+                    moves_needed = std::max(
+                        moves_needed, 
+                        _solve_game(get_new_candidates(candidates, q), max_depth, depth + 1) + 1);
                 }
                 
-                if(moves_needed != -Inf && ((moves_needed < ans) || (moves_needed == ans && moves_sum < ans_sum))) {
+                if(moves_needed != -Inf && moves_needed < ans) {
                     ans = moves_needed;
-                    ans_sum = moves_sum;
+                    max_depth = std::min(max_depth, depth + moves_needed);
                     where_to_go = i;
+                } else if(moves_needed == Inf) {
+                    can_insert = false;
                 }
             }
 
-            if(!memo.count(hash) || memo[hash] > ans) {
+            if(can_insert) {
                 where_to_go_map[hash] = where_to_go;
                 memo.insert({hash, ans});
             }

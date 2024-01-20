@@ -4,7 +4,7 @@
 #include "wys.h"
 
 namespace {
-int _n, _k, _g;
+int _n = 12, _k = 3, _g = 10000;
 int _x;
 int ileGier, ileZapytan, maxZapytan;
 }
@@ -12,7 +12,6 @@ int ileGier, ileZapytan, maxZapytan;
 std::bitset<20> which_chosen = 0;
 
 void dajParametry(int &n, int &k, int &g) {
-  _n = 12, _k = 3, _g = 10000;
   n = _n; k = _k; g = _g;
   _x = rand() % n + 1;
   which_chosen[_x] = 1;
