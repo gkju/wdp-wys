@@ -132,7 +132,7 @@ class WysSolver {
         }
 
         int solve_game() {
-            uint64_t max_depth = lg2c(n) * (2 * k + 1) + 3;
+            uint64_t max_depth = lg2c(n) * (2 * k + 1);
             return _solve_game(gen_initial_candidates(), max_depth);
         }
 
