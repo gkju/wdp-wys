@@ -54,13 +54,6 @@ constexpr void bitset_fill(candidates_list_t& bitset, int64_t a, int64_t b) {
     bitset = (1ULL << (b + 1)) - (1ULL << a);
 }
 
-// szybki srand z https://stackoverflow.com/questions/26237419/faster-than-rand
-static unsigned int seed;
-inline int fast_srand(void) {
-    seed = (214013 * seed + 2531011);
-    return (seed >> 16) & 0x7FFF;
-}
-
 // ta klasa bedzie zapisywac sobie drzewo gry dla danego n i k
 class WysSolver {
     int64_t n, k;
