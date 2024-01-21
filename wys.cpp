@@ -47,7 +47,7 @@ struct Query {
 };
 
 // ustawia wszystkie bity na 1 miedzy a i b
-constexpr void bitset_fill(candidates_list_t& bitset, int64_t a, int64_t b) {
+void bitset_fill(candidates_list_t& bitset, int64_t a, int64_t b) {
     if(a > b) {
         std::swap(a, b);
     }
@@ -79,12 +79,12 @@ class WysSolver {
         }
 
         // zmienia array i depth na pojedynczy int64_t (z uwagi na ograniczenia na n i k array to tak naprawde int)
-        int64_t hash_candidates(const candidates_list_t& candidates, int64_t depth) {
+        inline constexpr int64_t hash_candidates(const candidates_list_t& candidates, int64_t depth) {
             return candidates + (depth << (k + 1) * n);
         }
 
         // zaznacza liczby ktore są zgodne z query
-        candidates_t QueryToCandidates(const Query& query) {
+        inline constexpr candidates_t QueryToCandidates(const Query& query) {
             candidates_t ans = 0;
             int64_t beg = query.ans ? 0 : query.y - 1;
             int64_t end = query.ans ? query.y - 2 : n - 1;
@@ -93,7 +93,7 @@ class WysSolver {
         }
 
         // zwraca sume zbiorow z listy
-        constexpr candidates_t get_union(const candidates_list_t& list) {
+        inline constexpr candidates_t get_union(const candidates_list_t& list) {
             candidates_t ans = list;
             for(int64_t i = 0; i <= k; ++i) {
                 ans |= ans >> (i * n);
@@ -104,7 +104,7 @@ class WysSolver {
 
         // sprawdzamy terminalnosc stanu patrzac na wszystkich mozliwych kandydatow zaleznie od ilosci klamstw, w kazdym przypadku 
         // musi byc ten sam kandydat aby stan byl terminalny
-        GAME_STATE is_terminal(const candidates_list_t& candidates) {
+        inline constexpr GAME_STATE is_terminal(const candidates_list_t& candidates) {
             candidates_t check = get_union(candidates);
             if(!check) {
                 return INVALID;
@@ -112,7 +112,7 @@ class WysSolver {
             return __builtin_popcountll(check) == 1 ? TERMINAL : NON_TERMINAL;
         }
 
-        candidates_list_t gen_initial_candidates() {
+        constexpr candidates_list_t gen_initial_candidates() {
             candidates_list_t candidates = 0;
             bitset_fill(candidates, 0, (k + 1) * n - 1);
             return candidates;
