@@ -9,9 +9,9 @@
 #define MAX_K 3
 
 // Będziemy trzymać bitseta oznaczającego ktore liczby mogą być kandydatami na odpowiedź
-typedef uint64_t candidates_t;
+typedef int64_t candidates_t;
 // kandydaci beda tablica trzymana w intcie jako k+1 blokow n bitow
-typedef uint64_t candidates_list_t;
+typedef int64_t candidates_list_t;
 
 void set(int64_t& bitset, int64_t i) {
     bitset |= (1LL << i);
