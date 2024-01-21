@@ -65,10 +65,9 @@ class WysSolver {
     int64_t n, k;
     // n losowych permutacji [2, n]
     std::vector<std::vector<int32_t>> shuffles;
-    // spamietuje wyniki dla ustalonego stanu gdzie klucz to hash kandydatow dla danego stanu
-    std::unordered_map<int64_t, int64_t> memo;
-    // dla hashu stanu zapisuje gdzie isc
-    std::unordered_map<int64_t, int32_t> where_to_go_map;
+    // spamietuje (wyniki, gdzie isc) dla ustalonego stanu gdzie klucz to hash kandydatow dla danego stanu
+    typedef std::unordered_map<int64_t, std::pair<int32_t, int32_t>> memo_t;
+    memo_t memo;
     // bedzie zawierac maske ktora ma jedynki na pozycjach od 0 do n - 1
     candidates_t mask;
     // analogiczna maska ale dla k + 1 blokow jedynek
@@ -94,12 +93,8 @@ class WysSolver {
             bitset_fill(big_mask, 0, (k + 1) * n - 1);
         }
 
-        std::unordered_map<int64_t, int64_t> get_memo() {
+        memo_t get_memo() {
             return memo;
-        }
-
-        std::unordered_map<int64_t, int32_t> get_where_to() {
-            return where_to_go_map;
         }
 
         // zmienia array i depth na pojedynczy int64_t (z uwagi na ograniczenia na n i k array to tak naprawde int)
@@ -169,14 +164,14 @@ class WysSolver {
         // rozwiazuje gre i zwraca ilosc ruchow potrzebnych w optymalnej strategii
         int64_t _solve_game(const candidates_list_t& candidates, int64_t max_depth, int64_t depth = 0) {
             int64_t hash = hash_candidates(candidates, depth);
-            if(memo.count(hash)) { 
-                return memo[hash];
+            if(memo.count(hash)) {
+                return memo[hash].first;
             }
 
             auto terminality = is_terminal(candidates);
 
             if(terminality != NON_TERMINAL) {
-                memo.insert({hash, 0});
+                memo.insert({hash, {0, 0}});
                 return 0;
             } else if(depth > max_depth) {
                 return Inf;
@@ -213,8 +208,7 @@ class WysSolver {
             }
 
             if(can_insert) {
-                where_to_go_map[hash] = where_to_go;
-                memo.insert({hash, ans});
+                memo.insert({hash, {ans, where_to_go}});
             }
 
             return ans;
@@ -226,14 +220,13 @@ int main() {
     dajParametry(n, k, g);
     WysSolver solver(n, k);
     solver.solve_game();
-    auto where_to_map = std::move(solver.get_where_to());
     auto memo = std::move(solver.get_memo());
     for(int i = 0; i < g; ++i) {
         candidates_list_t candidates = solver.gen_initial_candidates();
         int32_t depth = 0;
         int64_t hash = solver.hash_candidates(candidates, depth);
-        while(memo[hash]) {
-            int32_t where_to_go = where_to_map[hash];
+        while(memo[hash].first) {
+            int32_t where_to_go = memo[hash].second;
             Query q = {where_to_go, mniejszaNiz(where_to_go)};
             candidates = solver.get_new_candidates(candidates, q);
             hash = solver.hash_candidates(candidates, ++depth);
