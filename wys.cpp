@@ -84,7 +84,7 @@ class WysSolver {
         }
 
         // zaznacza liczby ktore są zgodne z query
-        inline constexpr candidates_t QueryToCandidates(const Query& query) {
+        inline candidates_t QueryToCandidates(const Query& query) {
             candidates_t ans = 0;
             int64_t beg = query.ans ? 0 : query.y - 1;
             int64_t end = query.ans ? query.y - 2 : n - 1;
@@ -112,7 +112,7 @@ class WysSolver {
             return __builtin_popcountll(check) == 1 ? TERMINAL : NON_TERMINAL;
         }
 
-        constexpr candidates_list_t gen_initial_candidates() {
+        candidates_list_t gen_initial_candidates() {
             candidates_list_t candidates = 0;
             bitset_fill(candidates, 0, (k + 1) * n - 1);
             return candidates;
@@ -137,7 +137,7 @@ class WysSolver {
         }
 
         // uwzglednia nowe query i liczy jacy candidates powinni byc w nastepnym stanie
-        candidates_list_t get_new_candidates(const candidates_list_t& candidates, const Query& query) {
+        inline candidates_list_t get_new_candidates(const candidates_list_t& candidates, const Query& query) {
             candidates_t query_canidates = QueryToCandidates(query);
             // ta maska bedzie zawierac k + 1 kopii query_candidates do szybkiego andowania
             candidates_t query_candidates_mask = 0;
@@ -156,7 +156,7 @@ class WysSolver {
         }
 
         // rozwiazuje gre i zwraca ilosc ruchow potrzebnych w optymalnej strategii
-        int64_t _solve_game(const candidates_list_t& candidates, int64_t max_depth, int64_t depth = 0) {
+        inline int64_t _solve_game(const candidates_list_t& candidates, int64_t max_depth, int64_t depth = 0) {
             int64_t hash = hash_candidates(candidates, depth);
             if(memo.count(hash)) {
                 return memo[hash].first;
