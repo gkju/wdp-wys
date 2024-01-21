@@ -1,17 +1,13 @@
-#include <vector>
 #include <algorithm>
-#include <iostream>
 #include <unordered_map>
 #include <climits>
 #include <random>
-#include <array>
-#include <bitset>
 #include "wys.h"
 
 #define Inf (INT_MAX - 1)
 #define MAX_K 3
 
-// Będziemy trzymać bitseta oznaczjaącego ktore liczby mogą być kandydatami na odpowiedź
+// Będziemy trzymać bitseta oznaczającego ktore liczby mogą być kandydatami na odpowiedź
 typedef int64_t candidates_t;
 // kandydaci beda tablica trzymana w intcie jako k+1 blokow n bitow
 typedef int64_t candidates_list_t;
@@ -74,7 +70,7 @@ class WysSolver {
     // dla hashu stanu zapisuje gdzie isc
     std::unordered_map<int64_t, int32_t> where_to_go_map;
     // bedzie zawierac maske ktora ma jedynki na pozycjach od 0 do n - 1
-    candidates_list_t mask;
+    candidates_t mask;
     // analogiczna maska ale dla k + 1 blokow jedynek
     candidates_list_t big_mask;
     
@@ -111,7 +107,7 @@ class WysSolver {
             return candidates + (depth << (k + 1) * n);
         }
 
-        // zaznacza liczby ktore moga byc wedlug query
+        // zaznacza liczby ktore są zgodne z query
         constexpr candidates_t QueryToCandidates(const Query& query) {
             candidates_t ans = 0;
             int64_t beg = query.ans ? 0 : query.y - 1;
@@ -121,8 +117,8 @@ class WysSolver {
         }
 
         // zwraca sume zbiorow z listy
-        constexpr candidates_list_t get_union(const candidates_list_t& list) {
-            candidates_list_t ans = list;
+        constexpr candidates_t get_union(const candidates_list_t& list) {
+            candidates_t ans = list;
             for(int64_t i = 0; i <= k; ++i) {
                 ans |= ans >> (i * n);
             }
@@ -133,17 +129,6 @@ class WysSolver {
         // sprawdzamy terminalnosc stanu patrzac na wszystkich mozliwych kandydatow zaleznie od ilosci klamstw, w kazdym przypadku 
         // musi byc ten sam kandydat aby stan byl terminalny
         GAME_STATE is_terminal(const candidates_list_t& candidates) {
-            /* Gdyby candidates bylo array chcielibysmy wykonac nastepujace operacje;
-            candidates_t check = 0;
-            for(size_t i = 0; i <= k; ++i) {
-                check |= candidates[i];
-            }
-            if(!check) {
-                return INVALID;
-            }
-            return __builtin_popcount(check) == 1 ? TERMINAL : NON_TERMINAL;
-            */
-            // w przypadku int64_t musimy to zrobic inaczej
             candidates_t check = get_union(candidates);
             if(!check) {
                 return INVALID;
@@ -171,17 +156,7 @@ class WysSolver {
                 query_candidates_mask <<= n;
                 query_candidates_mask |= query_canidates;
             }
-            candidates_list_t new_candidates = 0;
-            /* Dla array kod bylby nastepujacy;
-            new_candidates[0] = candidates[0] & query_canidates;
-            for(size_t i = 1; i <= k; ++i) {
-                // nasze query jest klamstwem albo nie, stad albo mamy starych kandydatow obostrzonych o query albo bierzemy kandydatow dla mniejszej ilosci klamstw 
-                // i obostrzamy ich o to klamstwo
-                new_candidates[i] = candidates[i] & query_canidates;
-                new_candidates[i] |= candidates[i - 1] & ~query_canidates;
-            }
-            */
-            new_candidates = candidates & query_candidates_mask;
+            candidates_list_t new_candidates = candidates & query_candidates_mask;
             new_candidates |= (candidates << n) & ~query_candidates_mask;
             new_candidates &= big_mask;
             return new_candidates;
@@ -216,13 +191,13 @@ class WysSolver {
 
             // rozwazamy mozliwe ruchy przy czym pytanie sie o jedynke jest bez sensu gdy drugi gracz gra optymalnie
             for(int32_t _i = 2; _i <= n; ++_i) {
-                // prawdziwy indeks bedzie pochodzic z losowej permutacji permutacja
+                // prawdziwy indeks bedzie pochodzic z losowej permutacji
                 int32_t i = shuffles[shuffle_ind][_i - 2];
                 int64_t moves_needed = -Inf;
                 // musimy wziac maksymalna ilosc ruchow z dwoch mozliwych odpowiedzi na nasze pytanie
                 for(int j = 0; j < 2; ++j) {
                     auto q = Query {i, (bool) j};
-                    // max, bo w opt strat interesuje nas najgorszy przypadek
+                    // max, bo w optymalnej strategii interesuje nas najgorszy przypadek
                     moves_needed = std::max(
                         moves_needed, 
                         _solve_game(get_new_candidates(candidates, q), max_depth, depth + 1) + 1);

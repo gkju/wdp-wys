@@ -4,9 +4,10 @@
 #include "wys.h"
 
 namespace {
-int _n = 12, _k = 3, _g = 10000;
+int _n = 12, _k = 3, _g = 100000;
 int _x;
 int ileGier, ileZapytan, maxZapytan;
+int ile_klamalem = 0;
 }
 
 std::bitset<20> which_chosen = 0;
@@ -20,10 +21,13 @@ void dajParametry(int &n, int &k, int &g) {
 }
 
 bool mniejszaNiz(int y) {
-  if (ileZapytan++ < _k)
+  ++ileZapytan;
+  if (ile_klamalem < _k && rand() % _n == 1) {
+    ++ile_klamalem;
     return !(_x < y);
-  else
+  } else {
     return _x < y;
+  }
 }
 
 
@@ -42,5 +46,6 @@ void odpowiedz(int x) {
   }
   _x = rand() % _n + 1;
   which_chosen[_x] = 1;
+  ile_klamalem = 0;
   ileZapytan = 0;
 }
