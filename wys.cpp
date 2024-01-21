@@ -6,20 +6,11 @@
 #include "wys.h"
 
 #define Inf (INT_MAX - 1)
-#define MAX_K 3
 
 // Będziemy trzymać bitseta oznaczającego ktore liczby mogą być kandydatami na odpowiedź
-typedef int64_t candidates_t;
+typedef uint64_t candidates_t;
 // kandydaci beda tablica trzymana w intcie jako k+1 blokow n bitow
-typedef int64_t candidates_list_t;
-
-void set(int64_t& bitset, int64_t i) {
-    bitset |= (1LL << i);
-}
-
-void reset(int64_t& bitset, int64_t i) {
-    bitset &= ~(1LL << i);
-}
+typedef uint64_t candidates_list_t;
 
 // sufit z lg(x)
 int64_t lg2c(int64_t x) {
@@ -41,13 +32,13 @@ enum GAME_STATE {
 
 struct Query {
     // O co się pytaliśmy
-    int64_t y;
+    uint64_t y;
     // prawda gdy szukane < y
     bool ans;
 };
 
 // ustawia wszystkie bity na 1 miedzy a i b
-void bitset_fill(candidates_list_t& bitset, int64_t a, int64_t b) {
+void bitset_fill(candidates_list_t& bitset, uint64_t a, uint64_t b) {
     if(a > b) {
         std::swap(a, b);
     }
@@ -56,9 +47,9 @@ void bitset_fill(candidates_list_t& bitset, int64_t a, int64_t b) {
 
 // ta klasa bedzie zapisywac sobie drzewo gry dla danego n i k
 class WysSolver {
-    int64_t n, k;
+    uint64_t n, k;
     // spamietuje (wyniki, gdzie isc) dla ustalonego stanu gdzie klucz to hash kandydatow dla danego stanu
-    typedef std::unordered_map<int64_t, std::pair<int32_t, int32_t>> memo_t;
+    typedef std::unordered_map<uint64_t, std::pair<uint32_t, uint32_t>> memo_t;
     memo_t memo;
     // bedzie zawierac maske ktora ma jedynki na pozycjach od 0 do n - 1
     candidates_t mask;
@@ -79,23 +70,23 @@ class WysSolver {
         }
 
         // zmienia array i depth na pojedynczy int64_t (z uwagi na ograniczenia na n i k array to tak naprawde int)
-        inline constexpr int64_t hash_candidates(const candidates_list_t& candidates, int64_t depth) {
+        uint64_t hash_candidates(const candidates_list_t& candidates, uint64_t depth) {
             return candidates + (depth << (k + 1) * n);
         }
 
         // zaznacza liczby ktore są zgodne z query
-        inline candidates_t QueryToCandidates(const Query& query) {
+        candidates_t QueryToCandidates(const Query& query) {
             candidates_t ans = 0;
-            int64_t beg = query.ans ? 0 : query.y - 1;
-            int64_t end = query.ans ? query.y - 2 : n - 1;
+            uint64_t beg = query.ans ? 0 : query.y - 1;
+            uint64_t end = query.ans ? query.y - 2 : n - 1;
             bitset_fill(ans, beg, end);
             return ans;
         }
 
         // zwraca sume zbiorow z listy
-        inline constexpr candidates_t get_union(const candidates_list_t& list) {
+        candidates_t get_union(const candidates_list_t& list) {
             candidates_t ans = list;
-            for(int64_t i = 0; i <= k; ++i) {
+            for(uint64_t i = 0; i <= k; ++i) {
                 ans |= ans >> (i * n);
             }
             ans &= mask;
@@ -104,7 +95,7 @@ class WysSolver {
 
         // sprawdzamy terminalnosc stanu patrzac na wszystkich mozliwych kandydatow zaleznie od ilosci klamstw, w kazdym przypadku 
         // musi byc ten sam kandydat aby stan byl terminalny
-        inline constexpr GAME_STATE is_terminal(const candidates_list_t& candidates) {
+        GAME_STATE is_terminal(const candidates_list_t& candidates) {
             candidates_t check = get_union(candidates);
             if(!check) {
                 return INVALID;
@@ -122,10 +113,10 @@ class WysSolver {
             memo.clear();
         }
 
-        int64_t solve_game() {
-            int64_t max_depth = lg2c(n) * (2 * k + 1);
-            for(int i = 0; i <= max_depth; ++i) {
-                int64_t bound = _solve_game(gen_initial_candidates(), i);
+        uint64_t solve_game() {
+            uint64_t max_depth = lg2c(n) * (2 * k + 1);
+            for(uint32_t i = 0; i <= max_depth; ++i) {
+                uint64_t bound = _solve_game(gen_initial_candidates(), i);
                 if(bound != Inf) {
                     return bound;
                 }
@@ -137,11 +128,11 @@ class WysSolver {
         }
 
         // uwzglednia nowe query i liczy jacy candidates powinni byc w nastepnym stanie
-        inline candidates_list_t get_new_candidates(const candidates_list_t& candidates, const Query& query) {
+        candidates_list_t get_new_candidates(const candidates_list_t& candidates, const Query& query) {
             candidates_t query_canidates = QueryToCandidates(query);
             // ta maska bedzie zawierac k + 1 kopii query_candidates do szybkiego andowania
             candidates_t query_candidates_mask = 0;
-            for(int i = 0; i <= k; ++i) {
+            for(uint32_t i = 0; i <= k; ++i) {
                 query_candidates_mask <<= n;
                 query_candidates_mask |= query_canidates;
             }
@@ -151,13 +142,13 @@ class WysSolver {
             return new_candidates;
         }
 
-        int64_t extract_ans(const candidates_list_t& candidates) {
+        uint64_t extract_ans(const candidates_list_t& candidates) {
             return __builtin_ctzll(get_union(candidates)) + 1;
         }
 
         // rozwiazuje gre i zwraca ilosc ruchow potrzebnych w optymalnej strategii
-        inline int64_t _solve_game(const candidates_list_t& candidates, int64_t max_depth, int64_t depth = 0) {
-            int64_t hash = hash_candidates(candidates, depth);
+        uint64_t _solve_game(const candidates_list_t& candidates, int64_t max_depth, int64_t depth = 0) {
+            uint64_t hash = hash_candidates(candidates, depth);
             if(memo.count(hash)) {
                 return memo[hash].first;
             }
@@ -171,16 +162,17 @@ class WysSolver {
                 return Inf;
             }
 
-            int64_t ans = Inf;
-            int32_t where_to_go = -1;
+            uint64_t ans = Inf;
+            uint32_t where_to_go = 0;
             // nasza wartosc musi byc dobrze zdefiniowana aby ja wlozyc do mapy
             bool can_insert = true;
 
             // rozwazamy mozliwe ruchy przy czym pytanie sie o jedynke jest bez sensu gdy drugi gracz gra optymalnie
-            for(int32_t i = 2; i <= n; ++i) {
-                int64_t moves_needed = -Inf;
+            for(uint32_t i = 2; i <= n; ++i) {
+                // 0 jest domyslnie nieprawidlowa wartoscia, bo jestesmy w stanie nieterminalnym
+                uint64_t moves_needed = 0;
                 // musimy wziac maksymalna ilosc ruchow z dwoch mozliwych odpowiedzi na nasze pytanie
-                for(int j = 0; j < 2; ++j) {
+                for(uint32_t j = 0; j < 2; ++j) {
                     auto q = Query {i, (bool) j};
                     // max, bo w optymalnej strategii interesuje nas najgorszy przypadek
                     moves_needed = std::max(
@@ -188,7 +180,7 @@ class WysSolver {
                         _solve_game(get_new_candidates(candidates, q), max_depth, depth + 1) + 1);
                 }
                 
-                if(moves_needed != -Inf && moves_needed < ans) {
+                if(moves_needed != 0 && moves_needed < ans) {
                     ans = moves_needed;
                     where_to_go = i;
                 } else if(moves_needed == Inf) {
@@ -215,7 +207,7 @@ int main() {
         int32_t depth = 0;
         int64_t hash = solver.hash_candidates(candidates, depth);
         while(memo[hash].first) {
-            int32_t where_to_go = memo[hash].second;
+            uint32_t where_to_go = memo[hash].second;
             Query q = {where_to_go, mniejszaNiz(where_to_go)};
             candidates = solver.get_new_candidates(candidates, q);
             hash = solver.hash_candidates(candidates, ++depth);
