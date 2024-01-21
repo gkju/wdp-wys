@@ -2,15 +2,16 @@
 #include <unordered_map>
 #include <climits>
 #include <random>
+#include <iostream>
 #include "wys.h"
 
 #define Inf (INT_MAX - 1)
 #define MAX_K 3
 
 // Będziemy trzymać bitseta oznaczającego ktore liczby mogą być kandydatami na odpowiedź
-typedef int64_t candidates_t;
+typedef uint64_t candidates_t;
 // kandydaci beda tablica trzymana w intcie jako k+1 blokow n bitow
-typedef int64_t candidates_list_t;
+typedef uint64_t candidates_list_t;
 
 void set(int64_t& bitset, int64_t i) {
     bitset |= (1LL << i);
@@ -50,7 +51,7 @@ constexpr void bitset_fill(candidates_list_t& bitset, int64_t a, int64_t b) {
     if(a > b) {
         std::swap(a, b);
     }
-    bitset = (1LL << (b + 1)) - (1LL << a);
+    bitset = (1ULL << (b + 1)) - (1ULL << a);
 }
 
 // szybki srand z https://stackoverflow.com/questions/26237419/faster-than-rand
@@ -63,8 +64,6 @@ inline int fast_srand(void) {
 // ta klasa bedzie zapisywac sobie drzewo gry dla danego n i k
 class WysSolver {
     int64_t n, k;
-    // n losowych permutacji [2, n]
-    std::vector<std::vector<int32_t>> shuffles;
     // spamietuje (wyniki, gdzie isc) dla ustalonego stanu gdzie klucz to hash kandydatow dla danego stanu
     typedef std::unordered_map<int64_t, std::pair<int32_t, int32_t>> memo_t;
     memo_t memo;
@@ -78,17 +77,6 @@ class WysSolver {
             this->n = _n;
             this->k = _k;
 
-            std::random_device rd;
-            std::mt19937 g(rd());
-
-            for(int32_t i = 0; i < n; ++i) {
-                shuffles.push_back({});
-                for(int32_t j = 2; j <= n; ++j) {
-                    shuffles[i].push_back(j);
-                }
-                std::shuffle(shuffles[i].begin(), shuffles[i].end(), g);
-            }
-
             bitset_fill(mask, 0, n - 1);
             bitset_fill(big_mask, 0, (k + 1) * n - 1);
         }
@@ -98,12 +86,12 @@ class WysSolver {
         }
 
         // zmienia array i depth na pojedynczy int64_t (z uwagi na ograniczenia na n i k array to tak naprawde int)
-        constexpr int64_t hash_candidates(const candidates_list_t& candidates, int64_t depth) {
+        int64_t hash_candidates(const candidates_list_t& candidates, int64_t depth) {
             return candidates + (depth << (k + 1) * n);
         }
 
         // zaznacza liczby ktore są zgodne z query
-        constexpr candidates_t QueryToCandidates(const Query& query) {
+        candidates_t QueryToCandidates(const Query& query) {
             candidates_t ans = 0;
             int64_t beg = query.ans ? 0 : query.y - 1;
             int64_t end = query.ans ? query.y - 2 : n - 1;
@@ -137,9 +125,22 @@ class WysSolver {
             return candidates;
         }
 
+        void cleanup() {
+            memo.clear();
+        }
+
         int64_t solve_game() {
             int64_t max_depth = lg2c(n) * (2 * k + 1);
-            return _solve_game(gen_initial_candidates(), max_depth);
+            for(int i = 0; i <= max_depth; ++i) {
+                int64_t bound = _solve_game(gen_initial_candidates(), i);
+                if(bound != Inf) {
+                    return bound;
+                }
+
+                cleanup();
+            }
+            
+            return Inf;
         }
 
         // uwzglednia nowe query i liczy jacy candidates powinni byc w nastepnym stanie
@@ -177,17 +178,13 @@ class WysSolver {
                 return Inf;
             }
 
-            // bedziemy sie iterowac po losowej permutacji
-            int64_t shuffle_ind = fast_srand() % n;
             int64_t ans = Inf;
             int32_t where_to_go = -1;
             // nasza wartosc musi byc dobrze zdefiniowana aby ja wlozyc do mapy
             bool can_insert = true;
 
             // rozwazamy mozliwe ruchy przy czym pytanie sie o jedynke jest bez sensu gdy drugi gracz gra optymalnie
-            for(int32_t _i = 2; _i <= n; ++_i) {
-                // prawdziwy indeks bedzie pochodzic z losowej permutacji
-                int32_t i = shuffles[shuffle_ind][_i - 2];
+            for(int32_t i = 2; i <= n; ++i) {
                 int64_t moves_needed = -Inf;
                 // musimy wziac maksymalna ilosc ruchow z dwoch mozliwych odpowiedzi na nasze pytanie
                 for(int j = 0; j < 2; ++j) {
@@ -200,7 +197,6 @@ class WysSolver {
                 
                 if(moves_needed != -Inf && moves_needed < ans) {
                     ans = moves_needed;
-                    max_depth = std::min(max_depth, depth + moves_needed);
                     where_to_go = i;
                 } else if(moves_needed == Inf) {
                     can_insert = false;
@@ -220,7 +216,7 @@ int main() {
     dajParametry(n, k, g);
     WysSolver solver(n, k);
     solver.solve_game();
-    auto memo = std::move(solver.get_memo());
+    auto memo = solver.get_memo();
     for(int i = 0; i < g; ++i) {
         candidates_list_t candidates = solver.gen_initial_candidates();
         int32_t depth = 0;
