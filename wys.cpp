@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <unordered_map>
 #include <climits>
+#include <cstdint>
 #include "wys.h"
 
 #define Inf (INT_MAX - 1)
