@@ -4,7 +4,7 @@
 #include "wys.h"
 
 namespace {
-int _n = 12, _k = 3, _g = 10000;
+int _n = 12, _k = 3, _g = 10000000;
 int _x;
 int ileGier, ileZapytan, maxZapytan, maxKlamstw, ileMaxKlamstw;
 int ile_klamalem = 0;
@@ -22,7 +22,7 @@ void dajParametry(int &n, int &k, int &g) {
 
 bool mniejszaNiz(int y) {
   ++ileZapytan;
-  if (ile_klamalem < _k && (rand() % _n) / _k == 1) {
+  if (ile_klamalem < _k && (rand() % _n) < _k) {
     ++ile_klamalem;
     return !(_x < y);
   } else {

@@ -1,8 +1,6 @@
 #include <algorithm>
 #include <unordered_map>
 #include <climits>
-#include <random>
-#include <iostream>
 #include "wys.h"
 
 #define Inf (INT_MAX - 1)
@@ -70,8 +68,8 @@ class WysSolver {
         }
 
         // zmienia array i depth na pojedynczy int64_t (z uwagi na ograniczenia na n i k array to tak naprawde int)
-        uint64_t hash_candidates(const candidates_list_t& candidates, uint64_t depth) {
-            return candidates + (depth << (k + 1) * n);
+        uint64_t hash_candidates(const candidates_list_t& candidates) {
+            return candidates;
         }
 
         // zaznacza liczby ktore są zgodne z query
@@ -109,22 +107,8 @@ class WysSolver {
             return candidates;
         }
 
-        void cleanup() {
-            memo.clear();
-        }
-
         uint64_t solve_game() {
-            uint64_t max_depth = lg2c(n) * (2 * k + 1);
-            for(uint32_t i = 0; i <= max_depth; ++i) {
-                uint64_t bound = _solve_game(gen_initial_candidates(), i);
-                if(bound != Inf) {
-                    return bound;
-                }
-
-                cleanup();
-            }
-            
-            return Inf;
+            return _solve_game(gen_initial_candidates(), Inf);
         }
 
         // uwzglednia nowe query i liczy jacy candidates powinni byc w nastepnym stanie
@@ -148,8 +132,8 @@ class WysSolver {
 
         // rozwiazuje gre i zwraca ilosc ruchow potrzebnych w optymalnej strategii
         uint64_t _solve_game(const candidates_list_t& candidates, int64_t max_depth, int64_t depth = 0) {
-            uint64_t hash = hash_candidates(candidates, depth);
-            if(memo.count(hash)) {
+            uint64_t hash = hash_candidates(candidates);
+            if(memo.find(hash) != memo.end()) {
                 return memo[hash].first;
             }
 
@@ -158,8 +142,6 @@ class WysSolver {
             if(terminality != NON_TERMINAL) {
                 memo.insert({hash, {0, 0}});
                 return 0;
-            } else if(depth > max_depth) {
-                return Inf;
             }
 
             uint64_t ans = Inf;
@@ -169,11 +151,24 @@ class WysSolver {
 
             // rozwazamy mozliwe ruchy przy czym pytanie sie o jedynke jest bez sensu gdy drugi gracz gra optymalnie
             for(uint32_t i = 2; i <= n; ++i) {
+                Query queries[2];
+                for(uint32_t j = 0; j < 2; ++j) {
+                    queries[j] = {i, (bool) j};
+                }
+                // jesli da sie odpowiedziec na nasze pytanie tak, ze stan sie nie zmienia, to nie ma sensu pytac o i
+                bool check = false;
+                for(auto& q : queries) {
+                    if(get_new_candidates(candidates, q) == candidates) {
+                        check = true;
+                    }
+                }
+                if(check) {
+                    continue;
+                }
                 // 0 jest domyslnie nieprawidlowa wartoscia, bo jestesmy w stanie nieterminalnym
                 uint64_t moves_needed = 0;
                 // musimy wziac maksymalna ilosc ruchow z dwoch mozliwych odpowiedzi na nasze pytanie
-                for(uint32_t j = 0; j < 2; ++j) {
-                    auto q = Query {i, (bool) j};
+                for(auto& q : queries) {
                     // max, bo w optymalnej strategii interesuje nas najgorszy przypadek
                     moves_needed = std::max(
                         moves_needed, 
@@ -204,13 +199,12 @@ int main() {
     auto memo = solver.get_memo();
     for(int i = 0; i < g; ++i) {
         candidates_list_t candidates = solver.gen_initial_candidates();
-        int32_t depth = 0;
-        int64_t hash = solver.hash_candidates(candidates, depth);
+        uint64_t hash = solver.hash_candidates(candidates);
         while(memo[hash].first) {
             uint32_t where_to_go = memo[hash].second;
             Query q = {where_to_go, mniejszaNiz(where_to_go)};
             candidates = solver.get_new_candidates(candidates, q);
-            hash = solver.hash_candidates(candidates, ++depth);
+            hash = solver.hash_candidates(candidates);
         }
         odpowiedz((int32_t) solver.extract_ans(candidates));
     }
