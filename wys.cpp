@@ -11,17 +11,6 @@ typedef uint64_t candidates_t;
 // kandydaci beda tablica trzymana w intcie jako k+1 blokow n bitow
 typedef uint64_t candidates_list_t;
 
-// sufit z lg(x)
-int64_t lg2c(int64_t x) {
-    int64_t cur = 1;
-    int64_t ans = 0;
-    while(cur < x) {
-        cur <<= 1;
-        ++ans;
-    }
-    return ans;
-}
-
 // mozliwe stany wierzcholka, stan invalid oznacza niemozliwa konfiguracje odpowiedzi
 enum GAME_STATE {
     TERMINAL,
@@ -68,7 +57,8 @@ class WysSolver {
             return memo;
         }
 
-        // zmienia array i depth na pojedynczy int64_t (z uwagi na ograniczenia na n i k array to tak naprawde int)
+        // w przypadku opuszczenia ograniczen na n i k wystarczy zmienic na hash wektora
+        // zmienia array na pojedynczy int64_t (z uwagi na ograniczenia na n i k array to tak naprawde int)
         uint64_t hash_candidates(const candidates_list_t& candidates) {
             return candidates;
         }

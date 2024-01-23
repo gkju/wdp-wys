@@ -1,6 +1,7 @@
 #include <iostream>
 #include <algorithm>
 #include <bitset>
+#include <chrono>
 #include "wys.h"
 
 namespace {
@@ -13,16 +14,19 @@ int ile_klamalem = 0;
 std::bitset<20> which_chosen = 0;
 
 void dajParametry(int &n, int &k, int &g) {
-  n = _n; k = _k; g = _g;
+  std::cin >> n >> k >> g;
+  _n = n;
+  _k = k;
+  _g = g;
   _x = rand() % n + 1;
   which_chosen[_x] = 1;
   ileGier = ileZapytan = maxZapytan = maxKlamstw = ileMaxKlamstw = 0;
-  std::cout << "n = " << _n << ", k = " << _k << ", g = " << _g << '\n';
+  //std::cout << "n = " << _n << ", k = " << _k << ", g = " << _g << '\n';
 }
 
 bool mniejszaNiz(int y) {
   ++ileZapytan;
-  if (ile_klamalem < _k && (rand() % _n) < _k) {
+  if (ile_klamalem < _k && (rand() % (_n + 1)) < _k) {
     ++ile_klamalem;
     return !(_x < y);
   } else {
@@ -44,10 +48,11 @@ void odpowiedz(int x) {
   }
   ++ileGier;
   if (ileGier == _g) {
-    std::cout << "OK. Zadano maksymalnie " << maxZapytan << " zapytan.\n";
-    std::cout << "OK. Maksymalnie " << maxKlamstw << " razy klamano.\n";
-    std::cout << "OK. " << ileMaxKlamstw << " razy klamano " << _k << " razy.\n";
-    std::cout << "PYTANO O " << which_chosen << " \n";
+    std::cout << maxZapytan << '\n';
+    //std::cout << "OK. Zadano maksymalnie " << maxZapytan << " zapytan.\n";
+    //std::cout << "OK. Maksymalnie " << maxKlamstw << " razy klamano.\n";
+    //std::cout << "OK. " << ileMaxKlamstw << " razy klamano " << _k << " razy.\n";
+    //std::cout << "PYTANO O " << which_chosen << " \n";
     exit(0);
   }
   _x = rand() % _n + 1;
